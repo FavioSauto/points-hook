@@ -276,4 +276,30 @@ contract TakeProfitsHookTest is Test, Deployers {
         tokensLeftToSell = hook.pendingOrders(key.toId(), 60, true);
         assertEq(tokensLeftToSell, amount);
     }
+
+    function test_multiple_orderExecute_zeroForOne_both() public {
+        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest
+            .TestSettings({takeClaims: false, settleUsingBurn: false});
+
+        // Setup two zeroForOne orders at ticks 0 and 60
+        uint256 amount = 0.01 ether;
+
+        hook.placeOrder(key, 0, true, amount);
+        hook.placeOrder(key, 60, true, amount);
+
+        // Do a swap to make tick increase
+        SwapParams memory params = SwapParams({
+            zeroForOne: false,
+            amountSpecified: -0.5 ether,
+            sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
+        });
+
+        swapRouter.swap(key, params, testSettings, ZERO_BYTES);
+
+        uint256 tokensLeftToSell = hook.pendingOrders(key.toId(), 0, true);
+        assertEq(tokensLeftToSell, 0);
+
+        tokensLeftToSell = hook.pendingOrders(key.toId(), 60, true);
+        assertEq(tokensLeftToSell, 0);
+    }
 }
